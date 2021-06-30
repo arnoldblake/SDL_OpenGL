@@ -3,6 +3,8 @@
 #include "SDL_opengl.h"
 #include <stdio.h>
 #include <stdbool.h>
+#include <time.h>
+#include <math.h>
 
 int main (int argc, char *argv[]) {
     SDL_Init(SDL_INIT_EVERYTHING);
@@ -28,9 +30,10 @@ int main (int argc, char *argv[]) {
 
     const char* fragmentSource = "\
     #version 150 core\n\
+    uniform vec3 triangleColor;\
     out vec4 outColor;\
     void main() {\
-        outColor = vec4(1.0, 1.0, 1.0, 1.0);\
+        outColor = vec4(triangleColor, 1.0);\
     }";
 
     // Create Vertex Array Object
@@ -74,8 +77,8 @@ int main (int argc, char *argv[]) {
     glEnableVertexAttribArray(posAttrib);
     glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-
-    // I think we are stopping doing things here
+    GLint uniColor = glGetUniformLocation(shaderProgram, "triangleColor");
+    glUniform3f(uniColor, 1.0f, 0.0f, 0.0f);
 
     SDL_Event windowEvent;
     while (true) {
@@ -83,7 +86,10 @@ int main (int argc, char *argv[]) {
         {
             if (windowEvent.type == SDL_QUIT) break;
         }
-        
+
+        clock_t timeNow = clock();
+
+        glUniform3f(uniColor, sin(timeNow / 500.0f), 0.0f, 0.0f);
 
         // Clear the screen to black
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
