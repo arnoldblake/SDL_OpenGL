@@ -24,16 +24,19 @@ int main (int argc, char *argv[]) {
     const char* vertexSource = "\
     #version 150 core\n\
     in vec2 position;\
+    in vec3 color;\
+    out vec3 Color;\
     void main() {\
+        Color = color;\
         gl_Position = vec4(position, 0.0, 1.0);\
     }";
 
     const char* fragmentSource = "\
     #version 150 core\n\
-    uniform vec3 triangleColor;\
+    in vec3 Color;\
     out vec4 outColor;\
     void main() {\
-        outColor = vec4(triangleColor, 1.0);\
+        outColor = vec4(Color, 1.0);\
     }";
 
     // Create Vertex Array Object
@@ -46,9 +49,9 @@ int main (int argc, char *argv[]) {
     glGenBuffers(1, &vbo);
 
     GLfloat vertices[] = {
-         0.0f,  0.5f,
-         0.5f, -0.5f,
-        -0.5f, -0.5f
+         0.0f,  0.5f, 1.0f, 0.0f, 0.0f,
+         0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
+        -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
     };
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -72,13 +75,15 @@ int main (int argc, char *argv[]) {
     glLinkProgram(shaderProgram);
     glUseProgram(shaderProgram);
 
-    // Specify the layout of the vertex data
+    // Specify the layout of the vertex data for position
     GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
     glEnableVertexAttribArray(posAttrib);
-    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), 0);
 
-    GLint uniColor = glGetUniformLocation(shaderProgram, "triangleColor");
-    glUniform3f(uniColor, 1.0f, 0.0f, 0.0f);
+    // Specify the layout of the vertex data for color
+    GLint colAttrib = glGetAttribLocation(shaderProgram, "color");
+    glEnableVertexAttribArray(colAttrib);
+    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(2*sizeof(float)));
 
     SDL_Event windowEvent;
     while (true) {
@@ -86,10 +91,6 @@ int main (int argc, char *argv[]) {
         {
             if (windowEvent.type == SDL_QUIT) break;
         }
-
-        clock_t timeNow = clock();
-
-        glUniform3f(uniColor, sin(timeNow / 500.0f), 0.0f, 0.0f);
 
         // Clear the screen to black
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
