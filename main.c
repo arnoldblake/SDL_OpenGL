@@ -6,7 +6,28 @@
 #include <time.h>
 #include <math.h>
 
+const char* loadShader(const char* filename) {
+    FILE *f = fopen(filename, "rb");
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char* string = malloc(fsize + 1);
+    fread(string, 1, fsize, f);
+    fclose(f);
+    string[fsize] = 0;
+
+    if(f == NULL) {
+        printf("Error reading file");
+    }
+
+    return (const char*) string;
+}
+
 int main (int argc, char *argv[]) {
+
+    const char* vertexSource = loadShader("../vertexShader.glsl");
+    const char* fragmentSource = loadShader("../fragmentShader.glsl");
+
     SDL_Init(SDL_INIT_EVERYTHING);
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -19,25 +40,6 @@ int main (int argc, char *argv[]) {
 
     glewExperimental = true;
     glewInit();
-
-    // Were ready to do things here
-    const char* vertexSource = "\
-    #version 150 core\n\
-    in vec2 position;\
-    in vec3 color;\
-    out vec3 Color;\
-    void main() {\
-        Color = color;\
-        gl_Position = vec4(position, 0.0, 1.0);\
-    }";
-
-    const char* fragmentSource = "\
-    #version 150 core\n\
-    in vec3 Color;\
-    out vec4 outColor;\
-    void main() {\
-        outColor = vec4(Color, 1.0);\
-    }";
 
     // Create Vertex Array Object
     GLuint vao;
@@ -103,13 +105,6 @@ int main (int argc, char *argv[]) {
         {
             if (windowEvent.type == SDL_QUIT) break;
         }
-
-        // Clear the screen to black
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        // Draw a triangle from the 3 vertices
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // Clear the screen to black
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
