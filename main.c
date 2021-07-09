@@ -5,9 +5,22 @@
 #include <stdbool.h>
 #include <time.h>
 #include <math.h>
+#include <windows.h>
+
+#define MAX_PATH_SIZE 1024
+
+typedef struct {
+    GLuint vao;
+    GLuint vbo;
+    GLuint ebo;
+} BObject;
 
 const char* loadShader(const char* filename) {
-    FILE *f = fopen(filename, "rb");
+    char cwd[MAX_PATH_SIZE];
+    GetCurrentDirectory(MAX_PATH_SIZE, cwd);
+    strcat(cwd, filename);
+
+    FILE *f = fopen(cwd, "rb");
     fseek(f, 0, SEEK_END);
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -17,7 +30,7 @@ const char* loadShader(const char* filename) {
     string[fsize] = 0;
 
     if(f == NULL) {
-        printf("Error reading file");
+        printf("Error reading file %s\n", cwd);
     }
 
     return (const char*) string;
@@ -25,8 +38,8 @@ const char* loadShader(const char* filename) {
 
 int main (int argc, char *argv[]) {
 
-    const char* vertexSource = loadShader("../vertexShader.glsl");
-    const char* fragmentSource = loadShader("../fragmentShader.glsl");
+    const char* vertexSource = loadShader("\\..\\vertexShader.glsl");
+    const char* fragmentSource = loadShader("\\..\\fragmentShader.glsl");
 
     SDL_Init(SDL_INIT_EVERYTHING);
 
@@ -41,14 +54,14 @@ int main (int argc, char *argv[]) {
     glewExperimental = true;
     glewInit();
 
+    BObject bObject;
+
     // Create Vertex Array Object
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+    glGenVertexArrays(1, &bObject.vao);
+    glBindVertexArray(bObject.vao);
 
     // Create a Vertex Buffer Object and copy the vertex data to it
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &bObject.vbo);
 
     GLfloat vertices[] = {
         -0.5f,  0.5f, 1.0f, 0.0f, 0.0f, // Top-left
@@ -57,18 +70,17 @@ int main (int argc, char *argv[]) {
         -0.5f, -0.5f, 1.0f, 1.0f, 1.0f  // Bottom-left
     };
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, bObject.vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     // Create a Element Buffer Object and copy the vertex data to it
-    GLuint ebo;
-    glGenBuffers(1, &ebo);
+    glGenBuffers(1, &bObject.ebo);
     
     GLuint elements[] = {
         0, 1, 2,
         2, 3, 0
     };
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bObject.ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 
     // Create and compile the vertex shader
