@@ -1,6 +1,8 @@
 #include "glew.h"
 #include "SDL.h"
 #include "SDL_opengl.h"
+#include "cglm.h"
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <time.h>
@@ -71,6 +73,18 @@ void checkForCompileErrors(GLuint* program) {
 }
 
 int main (int argc, char *argv[]) {
+
+    // Test code for GLM please remove
+    mat4 m;
+    glm_mat4_identity(m);
+
+    glm_rotate(m, GLM_PI, (vec3){0.0f,0.0f,1.0f});
+    vec4 result;
+    glm_mat4_mulv(m, (vec4){1.0f,0.0f,0.0f,1.0f}, result);
+    printf("%f, %f, %f, %f\n", result[0], result[1], result[2], result[3]);
+
+    // Finished with test code
+    
 
     SDL_Init(SDL_INIT_EVERYTHING);
 
