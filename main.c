@@ -7,7 +7,20 @@
 #include <math.h>
 #include <windows.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #define MAX_PATH_SIZE 1024
+
+// TODO: Implement Vertex Shader, Fragment Shader, Shader Program into our BObject
+
+/*
+    BObject contains a:
+        Vertex Array Object
+        Vertex Buffer Object
+        Element Buffer Object
+*/
+
 
 typedef struct {
     GLuint vao;
@@ -36,17 +49,36 @@ const char* loadShader(const char* filename) {
     return (const char*) string;
 }
 
-int main (int argc, char *argv[]) {
+void checkForShaderErrors(GLuint* shader) {
+    GLint status;
+    glGetShaderiv(*shader, GL_COMPILE_STATUS, &status);
+    if (status != GL_TRUE) {
+        char buffer[512];
+        glGetShaderInfoLog(*shader, 512, NULL, buffer);
+        printf("%s", buffer);
+    }
+}
 
-    const char* vertexSource = loadShader("\\..\\vertexShader.glsl");
-    const char* fragmentSource = loadShader("\\..\\fragmentShader.glsl");
+void checkForCompileErrors(GLuint* program) {
+    GLint status;
+    glGetProgramiv(*program, GL_LINK_STATUS, &status);
+    if (status != GL_TRUE) {
+        char buffer[512];
+        glGetProgramInfoLog(*program, 512, NULL, buffer);
+        printf("%s", buffer);
+    }
+
+}
+
+int main (int argc, char *argv[]) {
 
     SDL_Init(SDL_INIT_EVERYTHING);
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    //SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
     SDL_Window* window = SDL_CreateWindow("OpenGL", 100, 100, 800, 600, SDL_WINDOW_OPENGL);
     SDL_GLContext context = SDL_GL_CreateContext(window);
@@ -54,62 +86,89 @@ int main (int argc, char *argv[]) {
     glewExperimental = true;
     glewInit();
 
-    BObject bObject;
+    const char* vertexSource = loadShader("\\..\\vertexShader.glsl");
+    const char* fragmentSource = loadShader("\\..\\fragmentShader.glsl");
 
-    // Create Vertex Array Object
-    glGenVertexArrays(1, &bObject.vao);
-    glBindVertexArray(bObject.vao);
-
-    // Create a Vertex Buffer Object and copy the vertex data to it
-    glGenBuffers(1, &bObject.vbo);
-
-    GLfloat vertices[] = {
-        -0.5f,  0.5f, 1.0f, 0.0f, 0.0f, // Top-left
-         0.5f,  0.5f, 0.0f, 1.0f, 0.0f, // Top-right
-         0.5f, -0.5f, 0.0f, 0.0f, 1.0f, // Bottom-right
-        -0.5f, -0.5f, 1.0f, 1.0f, 1.0f  // Bottom-left
-    };
-
-    glBindBuffer(GL_ARRAY_BUFFER, bObject.vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    // Create a Element Buffer Object and copy the vertex data to it
-    glGenBuffers(1, &bObject.ebo);
     
-    GLuint elements[] = {
-        0, 1, 2,
-        2, 3, 0
-    };
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bObject.ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
-
     // Create and compile the vertex shader
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexSource, NULL);
     glCompileShader(vertexShader);
+    checkForShaderErrors(&vertexShader);
 
     // Create and compile the fragment shader
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
     glCompileShader(fragmentShader);
+    checkForShaderErrors(&fragmentShader);
 
     // Link the vertex and fragment shader into a shader program
     GLuint shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
-    glBindFragDataLocation(shaderProgram, 0, "outColor");
     glLinkProgram(shaderProgram);
+    checkForCompileErrors(&shaderProgram);
+
+    // Tell GL that we are using our newly compiled shader program
     glUseProgram(shaderProgram);
 
-    // Specify the layout of the vertex data for position
-    GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
-    glEnableVertexAttribArray(posAttrib);
-    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), 0);
+    BObject bObject;
 
+    GLfloat vertices[] = {
+        // Position            // Color             // Texture
+        -0.5f,  0.5f, 0.0f,    1.0f, 1.0f, 0.0f,    0.0f, 1.0f, // Top-left
+         0.5f,  0.5f, 0.0f,    1.0f, 0.0f, 0.0f,    1.0f, 1.0f, // Top-right
+         0.5f, -0.5f, 0.0f,    0.0f, 1.0f, 0.0f,    1.0f, 0.0f, // Bottom-right
+        -0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f,    0.0f, 0.0f  // Bottom-left
+    };
+    // Element Buffer Indexes
+    GLuint elements[] = {
+        0,1,2,
+        0,3,2
+    };
+
+    // Create Vertex Array Object
+    glGenVertexArrays(1, &bObject.vao);
+    // Create a Element Buffer Object and copy the vertex data to it
+    glGenBuffers(1, &bObject.ebo);
+    // Create a Vertex Buffer Object and copy the vertex data to it
+    glGenBuffers(1, &bObject.vbo);
+
+    glBindVertexArray(bObject.vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, bObject.vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bObject.ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+
+    // Specify the layout of the vertex data for position
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
     // Specify the layout of the vertex data for color
-    GLint colAttrib = glGetAttribLocation(shaderProgram, "color");
-    glEnableVertexAttribArray(colAttrib);
-    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(2*sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    // Specify the layout of the vertex data for texture
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    // Create texture
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load("..\\container.jpg", &width, &height, &nrChannels, 0);
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        printf("Failed to load texture data.\n");
+    }
+    stbi_image_free(data);
 
     SDL_Event windowEvent;
     while (true) {
